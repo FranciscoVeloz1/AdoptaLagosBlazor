@@ -1,0 +1,105 @@
+﻿@page "/profile/{Nombre}"
+
+@using Microsoft.WindowsAzure.Storage;
+@using Microsoft.WindowsAzure.Storage.Table;
+@using System.Threading.Tasks;
+@using System.Linq;
+@using System.Collections.Generic;
+
+
+<style>
+    .card-body p {
+        font-size: 20px;
+    }
+</style>
+
+<div class="container my-4">
+    <div class="row">
+        <div class="col-12 text-center">
+            <h3>Perfil de @Nombre</h3>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-lg-4 col-md-6 col-12 mx-auto text-center">
+            <div class="card">
+                <div class="card-body">
+
+
+                    @foreach (var f in Filtrado)
+                    {
+                        <img src="@f.Imagen" alt="Imagen" class="card-img mb-3" width="100%" height="400px" />
+                        <img src="@f.Imagen" id="img" width="300px" height="400px" hidden crossorigin="anonymous" />
+                        <p class="text-secondary">Especie: <span class="text-black">@f.Especie</span></p>
+                        <p class="text-secondary">Nombre: <span class="text-black">@f.RowKey</span></p>
+                        <p class="text-secondary">Edad: <span class="text-black">@f.Edad</span></p>
+                        <p class="text-secondary">Estado: <span class="text-black">@f.Estado</span></p>
+                        <p class="text-secondary">Raza: <span class="text-black" id="raza"></span></p>
+                    }
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    [Parameter]
+    public string Nombre { get; set; }
+
+    List<datosanimales> Datosanimales = new List<datosanimales>();
+    List<datosanimales> Filtrado = new List<datosanimales>();
+    List<ElementosDeLaTabla> ElementosTabla = new List<ElementosDeLaTabla>();
+    string elementoImagen;
+
+    protected override async Task OnInitializedAsync()
+    {
+        string cadena = "DefaultEndpointsProtocol=https;AccountName=datosdanieled;AccountKey=nMZGZodVcSKyXaOSheBtcZd+slqujKr1J5Z9ebYH2JrXLyVI7Oqf3LNY7uL8vqk6ZkrTwr/vnUVldLACgZOKTw==;EndpointSuffix=core.windows.net";
+        var CuentaAlmacenamiento = CloudStorageAccount.Parse(cadena);
+
+        var TablaNoSql = CuentaAlmacenamiento.CreateCloudTableClient();
+        var Tabla = TablaNoSql.GetTableReference("datosanimales");
+        var Consulta = new TableQuery<datosanimales>();
+        TableContinuationToken token = null;
+
+        try
+        {
+            var Datos = await Tabla.ExecuteQuerySegmentedAsync<datosanimales>(Consulta, token, null, null);
+            Datosanimales.AddRange(Datos.Results);
+
+            foreach (var a in Datosanimales)
+            {
+                if (a.RowKey.Equals(Nombre))
+                {
+                    Filtrado.Add(a);
+                }
+            }
+        }
+        catch (Exception ex) { }
+    }
+
+    public class datosanimales : TableEntity
+    {
+        public datosanimales(string Animales, string Nombre)
+        {
+            PartitionKey = Animales;
+            RowKey = Nombre;
+        }
+
+        public datosanimales() { }
+
+        public string Especie { get; set; }
+        public int Edad { get; set; }
+        public string Estado { get; set; }
+        public string Imagen { get; set; }
+    }
+
+    public class ElementosDeLaTabla
+    {
+        public string Especie { get; set; }
+        public string Nombre { get; set; }
+        public int Edad { get; set; }
+        public string Estado { get; set; }
+    }
+}

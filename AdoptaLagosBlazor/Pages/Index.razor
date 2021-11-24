@@ -1,0 +1,115 @@
+﻿@page "/"
+
+@using Microsoft.WindowsAzure.Storage;
+@using Microsoft.WindowsAzure.Storage.Table;
+@using System.Threading.Tasks;
+@using System.Linq;
+@using System.Collections.Generic;
+
+<div class="container my-4">
+    <div class="row">
+        <div class="col-lg-12 text-center">
+            <h2>Adopta Lagos</h2>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-lg-12">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Especie</th>
+                            <th>Nombre</th>
+                            <th>Edad</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (datosanimales a in Datosanimales)
+                        {
+                            <tr>
+                                <td>@a.Especie</td>
+                                <td>@a.RowKey</td>
+                                <td>@a.Edad</td>
+                                <td>@a.Estado</td>
+                                <td>
+                                    <NavLink href=@($"/profile/{a.RowKey}") class="btn btn-success">
+                                        Ver perfil
+                                    </NavLink>
+                                </td>
+                            </tr>
+
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    List<datosanimales> Datosanimales = new List<datosanimales>();
+    List<ElementosDeLaTabla> ElementosTabla = new List<ElementosDeLaTabla>();
+    string elementoImagen;
+
+    protected override async Task OnInitializedAsync()
+    {
+        string cadena = "";
+        var CuentaAlmacenamiento = CloudStorageAccount.Parse(cadena);
+
+        var TablaNoSql = CuentaAlmacenamiento.CreateCloudTableClient();
+        var Tabla = TablaNoSql.GetTableReference("datosanimales");
+        var Consulta = new TableQuery<datosanimales>();
+        TableContinuationToken token = null;
+
+        try
+        {
+            var Datos = await Tabla.ExecuteQuerySegmentedAsync<datosanimales>(Consulta, token, null, null);
+            Datosanimales.AddRange(Datos.Results);
+            int iEspecie = 0;
+            int iNombre = 0;
+            int iEdad = 0;
+            int iEstado = 0;
+            int iImagen = 0;
+
+            ElementosTabla = Datosanimales.Select(r => new ElementosDeLaTabla()
+            {
+                Especie = Datosanimales.ElementAt(iEspecie++).Especie,
+                Nombre = Datosanimales.ElementAt(iNombre++).RowKey,
+                Edad = Datosanimales.ElementAt(iEdad++).Edad,
+                Estado = Datosanimales.ElementAt(iEstado++).Estado,
+                Imagen = Datosanimales.ElementAt(iImagen++).Estado,
+
+            }).ToList();
+        }
+        catch (Exception ex) { }
+    }
+
+    public class datosanimales : TableEntity
+    {
+        public datosanimales(string Animales, string Nombre)
+        {
+            PartitionKey = Animales;
+            RowKey = Nombre;
+        }
+
+        public datosanimales() { }
+
+        public string Especie { get; set; }
+        public int Edad { get; set; }
+        public string Estado { get; set; }
+        public string Imagen { get; set; }
+    }
+
+    public class ElementosDeLaTabla
+    {
+        public string Especie { get; set; }
+        public string Nombre { get; set; }
+        public int Edad { get; set; }
+        public string Estado { get; set; }
+        public string Imagen { get; set; }
+    }
+}
